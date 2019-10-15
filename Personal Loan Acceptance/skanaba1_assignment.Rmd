@@ -1,0 +1,220 @@
+---
+title: "Personal Loan Acceptance"
+author: "Sonal"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+###Project Background:
+
+*Liability customers - Majority - Depositors
+
+*Asset customers     - Small    - Borrowers
+
+*Campaign of last year - conversion rate of 9.6% [Among the 5000 customers, only 480 (= 9.6%) accepted the personal loan that was offered to them in the earlier campaign.]
+
+*Goal : use k-NN to predict whether a new customer will accept a loan offer.
+
+* data: 5000 customers
+
+*success class as 1 (loan acceptance)
+
+####Packages used
+
+```{r}
+library(psych)
+library(caret)
+library(FNN)
+library(class)
+library(dplyr)
+```
+
+
+####Data Exploration
+
+```{r}
+#loading the data in R
+originaldata <- read.csv("UniversalBank.csv")
+```
+
+```{r}
+#Eliminating variables [id & zip code] from the dataset
+df=subset(originaldata, select=-c(ID, ZIP.Code ))
+```
+
+
+```{r}
+#creating dummies
+#library(psych)
+dummy_Education <- as.data.frame(dummy.code(df$Education))
+names(dummy_Education) <- c("Education_1", "Education_2","Education_3") #renaiming dummy variable
+df_without_education <- subset(df, select=-c(Education)) #eliminating education variable
+
+UBank_data <- cbind(df_without_education, dummy_Education) #main dataset
+
+```
+
+####Data Partition
+
+```{r}
+#Partitioning the data into Traning(60%) and Validation(40%)
+#library(caret)
+set.seed(2019)
+Train_Index = createDataPartition(UBank_data$Age, p= 0.6 , list=FALSE)
+Train_Data = UBank_data[Train_Index,]  #3001 observations
+
+Validation_Data = UBank_data[-Train_Index,] #1999 observations
+```
+
+####Genearting Test Data
+
+```{r}
+Test_Data <- data.frame(Age=40 , Experience=10, Income = 84, Family = 2, CCAvg = 2, Education_1 = 0, Education_2 = 1, Education_3 = 0, Mortgage = 0, Securities.Account = 0, CD.Account = 0, Online = 1,  CreditCard = 1, stringsAsFactors = FALSE)
+```
+
+####Data Normalization
+
+```{r}
+head(Train_Data)
+
+#Normalization
+normalize.data <- function(x) {
+return ((x - min(x)) / (max(x) - min(x))) }
+
+train.norm.df <- as.data.frame(lapply(Train_Data,normalize.data))
+valid.norm.df <- as.data.frame(lapply(Validation_Data,normalize.data))
+
+head(train.norm.df)
+```
+
+####Perfoming knn classification
+
+```{r}
+#library(FNN)
+set.seed(7777)
+prediction <- knn(train = train.norm.df[,-7], test = valid.norm.df[,-7], 
+          cl = train.norm.df[,7], k = 1, prob=TRUE) 
+actual= valid.norm.df$Personal.Loan
+prediction_prob = attr(prediction,"prob")
+
+
+
+#Answer 3: confusion matrix for the best k value =1
+table(prediction,actual)  
+mean(prediction==actual)  #accuracy of the best k=1
+```
+
+
+```{r}
+#library(class)
+NROW(train.norm.df)
+sqrt(3001)
+
+```
+
+```{r}
+# genearting loop to find best k
+#library(caret)
+#library(FNN)
+
+accuracy.df <- data.frame(k = seq(1, 60, 1), accuracy = rep(0, 60))
+
+# compute knn for different k on validation.
+for(i in 1:60) {
+prediction <- knn(train = train.norm.df[,-7], test = valid.norm.df[-7], 
+          cl = train.norm.df[,7], k = i, prob=TRUE) 
+
+accuracy.df[i,2] <- mean(prediction==actual)
+
+
+}
+accuracy.df  
+
+```
+#####Answer 2: The value of k we choose is 1 as it provides the best result 
+
+
+####perfominng knn classification on test data
+```{r}
+#library(FNN)
+prediction_test <- knn(train = train.norm.df[,-7], test = Test_Data, 
+          cl = train.norm.df[,7], k = 1, prob=TRUE) 
+
+
+head(prediction_test)
+
+```
+#####Answer 4: The customer gets approved for the loan [loan accepted]
+
+
+
+####Question 5
+
+```{r}
+#Repartitiong the data 
+
+#Partitioning the data into Traning(50%) ,Validation(30%), Test(20%)
+#library(dplyr)
+#library(caret)
+set.seed(2000)
+
+Test_Index_1 = createDataPartition(UBank_data$Age, p= 0.2 , list=FALSE)
+Test_Data_1  = UBank_data [Test_Index_1,]
+
+Rem_DATA = UBank_data[-Test_Index_1,]
+
+Train_Index_1 = createDataPartition(Rem_DATA$Age, p= 0.5 , list=FALSE)
+Train_Data_1 = Rem_DATA[Train_Index_1,] 
+
+Validation_Data_1 = Rem_DATA[-Train_Index_1,] 
+
+```
+
+```{r}
+#Normalization
+normalize.data <- function(x) {
+return ((x - min(x)) / (max(x) - min(x))) }
+
+train.norm.df_1 <- as.data.frame(lapply(Train_Data_1,normalize.data))
+valid.norm.df_1 <- as.data.frame(lapply(Validation_Data_1,normalize.data))
+test.norm.df_1  <- as.data.frame(lapply(Test_Data_1,normalize.data))
+
+#head(train.norm.df_1)
+#head(valid.norm.df_1)
+#head(test.norm.df_1)
+
+```
+
+
+
+```{r}
+#perfominng knn classification on Training Data
+#library(FNN)
+set.seed(45477)
+prediction_Q5 <- knn(train = train.norm.df_1[,-7], test = valid.norm.df_1[,-7], 
+          cl = train.norm.df_1[,7], k = 1, prob=TRUE) 
+actual= valid.norm.df_1$Personal.Loan
+prediction_prob = attr(prediction_Q5,"prob")
+
+table(prediction_Q5,actual)  #confusion matrix for the best k value =1
+mean(prediction_Q5==actual)  #accuracy of the best k=1
+```
+```{r}
+#perfominng knn classification on Test Data
+library(FNN)
+set.seed(45477)
+prediction_Q5 <- knn(train = train.norm.df_1[,-7], test = test.norm.df_1[,-7], 
+          cl = train.norm.df_1[,7], k = 1, prob=TRUE) 
+actual= test.norm.df_1$Personal.Loan
+prediction_prob = attr(prediction_Q5,"prob")
+
+table(prediction_Q5,actual)  #confusion matrix for the best k value =1
+mean(prediction_Q5==actual)  #accuracy of the best k=1
+```
