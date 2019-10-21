@@ -221,8 +221,10 @@ Validation_Data = UBank_data[-Train_Index,] #1999 observations</code></pre>
 normalize.data &lt;- function(x) {
 return ((x - min(x)) / (max(x) - min(x))) }
 
-train.norm.df &lt;- as.data.frame(lapply(Train_Data,normalize.data))
-valid.norm.df &lt;- as.data.frame(lapply(Validation_Data,normalize.data))
+train.norm.df &lt;- as.data.frame(lapply(Train_Data,normalize.data)) #training data
+valid.norm.df &lt;- as.data.frame(lapply(Validation_Data,normalize.data)) #validation data
+
+maindata.norm.df &lt;- as.data.frame(lapply(UBank_data,normalize.data)) #[training + vaidation data]
 
 head(train.norm.df)</code></pre>
 <pre><code>##         Age Experience     Income    Family CCAvg  Mortgage Personal.Loan
@@ -355,15 +357,15 @@ accuracy.df  </code></pre>
 <div id="perfominng-knn-classification-on-test-data" class="section level4">
 <h4>perfominng knn classification on test data</h4>
 <pre class="r"><code>#library(FNN)
-prediction_test &lt;- knn(train = train.norm.df[,-7], test = Test_Data, 
-          cl = train.norm.df[,7], k = 1, prob=TRUE) 
+prediction_test &lt;- knn(train = maindata.norm.df[,-7], test = Test_Data, 
+          cl = maindata.norm.df[,7], k = 1, prob=TRUE) 
 
 
 head(prediction_test)</code></pre>
 <pre><code>## [1] 1
 ## Levels: 0 1</code></pre>
-<div id="answer-4-the-customer-gets-approved-for-the-loan-loan-accepted" class="section level5">
-<h5>Answer 4: The customer gets approved for the loan [loan accepted]</h5>
+<div id="answer-4-the-customer-will-accept-the-loan-offer-loan-accepted" class="section level5">
+<h5>Answer 4: The customer will accept the loan offer [loan accepted]</h5>
 </div>
 </div>
 <div id="question-5" class="section level4">
@@ -375,10 +377,10 @@ head(prediction_test)</code></pre>
 #library(caret)
 set.seed(2000)
 
-Test_Index_1 = createDataPartition(UBank_data$Age, p= 0.2 , list=FALSE)
+Test_Index_1 = createDataPartition(UBank_data$Age, p= 0.2 , list=FALSE) #20% test data 
 Test_Data_1  = UBank_data [Test_Index_1,]
 
-Rem_DATA = UBank_data[-Test_Index_1,]
+Rem_DATA = UBank_data[-Test_Index_1,] #80% remaining data [training + validation]
 
 Train_Index_1 = createDataPartition(Rem_DATA$Age, p= 0.5 , list=FALSE)
 Train_Data_1 = Rem_DATA[Train_Index_1,] 
@@ -388,9 +390,10 @@ Validation_Data_1 = Rem_DATA[-Train_Index_1,] </code></pre>
 normalize.data &lt;- function(x) {
 return ((x - min(x)) / (max(x) - min(x))) }
 
-train.norm.df_1 &lt;- as.data.frame(lapply(Train_Data_1,normalize.data))
-valid.norm.df_1 &lt;- as.data.frame(lapply(Validation_Data_1,normalize.data))
-test.norm.df_1  &lt;- as.data.frame(lapply(Test_Data_1,normalize.data))
+train.norm.df_1 &lt;- as.data.frame(lapply(Train_Data_1,normalize.data)) #training data
+valid.norm.df_1 &lt;- as.data.frame(lapply(Validation_Data_1,normalize.data)) #validation data
+test.norm.df_1  &lt;- as.data.frame(lapply(Test_Data_1,normalize.data)) #test data
+rem_data.norm.df_1 &lt;- as.data.frame(lapply(Rem_DATA,normalize.data)) #training and validation data
 
 #head(train.norm.df_1)
 #head(valid.norm.df_1)
@@ -413,18 +416,18 @@ table(prediction_Q5,actual)  #confusion matrix for the best k value =1</code></p
 <pre class="r"><code>#perfominng knn classification on Test Data
 library(FNN)
 set.seed(45477)
-prediction_Q5 &lt;- knn(train = train.norm.df_1[,-7], test = test.norm.df_1[,-7], 
-          cl = train.norm.df_1[,7], k = 1, prob=TRUE) 
+prediction_Q5 &lt;- knn(train = rem_data.norm.df_1[,-7], test = test.norm.df_1[,-7], 
+          cl = rem_data.norm.df_1[,7], k = 1, prob=TRUE) 
 actual= test.norm.df_1$Personal.Loan
 prediction_prob = attr(prediction_Q5,&quot;prob&quot;)
 
 table(prediction_Q5,actual)  #confusion matrix for the best k value =1</code></pre>
 <pre><code>##              actual
 ## prediction_Q5   0   1
-##             0 884  24
-##             1  15  78</code></pre>
+##             0 884  22
+##             1  15  80</code></pre>
 <pre class="r"><code>mean(prediction_Q5==actual)  #accuracy of the best k=1</code></pre>
-<pre><code>## [1] 0.961039</code></pre>
+<pre><code>## [1] 0.963037</code></pre>
 </div>
 </div>
 
