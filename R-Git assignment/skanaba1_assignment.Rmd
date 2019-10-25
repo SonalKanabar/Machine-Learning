@@ -8,7 +8,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-* Data Source 
+####Data Source 
+
 ```{r}
 #data source :[Kaggle Competitions]-Titanic Dataset 
 
@@ -16,12 +17,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-* Importing data in R
+####Importing data in R
+
 ```{r}
 mydata <- read.csv("titanic.csv")
 ```
 
-* Descriptive Statistics of variables 
+####Descriptive Statistics of variables 
+
 ```{r}
 library(psych)
 psych::describe(mydata)
@@ -30,7 +33,8 @@ psych::describe(mydata)
 #2.When the function recodes a categorical variable into a numeric variable, it denotes this by adding an * at the end of the variable name.
 ```
 
-* Categorical Variables
+####Categorical Variables
+
 ```{r}
 #Pclass and Survived both are categorical variable but are been read as integer variable in R and hence the descriptive statistics for both the categoricals are outputed differently.
 
@@ -42,10 +46,10 @@ summary(mydata$Sex)
 summary(mydata$Survived)
 ```
 
-* Variable Transformation
+####Variable Transformation
 
 ```{r}
-#We are transforming Pclass and Survived to factor variables [reason being both the categorical variables have been read as numeric]
+#We are transforming Pclass and Survived to factor variables [reason being both the categorical variables have been read as numeric in R]
 
 names<- c('Pclass' , 'Survived')
 mydata[,names] <- lapply(mydata[,names], factor)
@@ -53,7 +57,8 @@ summary(mydata$Pclass)
 summary(mydata$Survived)
 ```
 
-* Plotting Scatterplot
+####Plotting Scatterplot
+
 ```{r}
 age   = mydata$Age
 fare  = mydata$Fare
