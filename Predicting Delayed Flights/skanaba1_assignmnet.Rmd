@@ -1,0 +1,118 @@
+---
+title: "Predicting Delayed Flights"
+author: "Sonal Kanabar"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Project Background
+*Outcome of interest : whether or not the flight is delayed (delayed here means arrived more than 15 minutes late).
+
+*% of delayed flights among 2201 flights = 19.5%. 
+
+*The data were obtained from the Bureau of Transportation Statistics (available on the web at www.transtats.bts.gov). 
+
+*GOAL :-)  to accurately predict whether or not a new flight (not in this dataset), will be delayed.
+
+*The outcome variable is whether the flight was delayed, and thus it has two classes (1 = delayed and 0 = on time).
+
+
+####Packages Used 
+```{r}
+library(caret)   #for creating data partition
+library(e1071)   #for creating Naive Bayes
+library(gmodels) #for creatong cross table
+library(pROC)    #for plotting ROC curves
+
+```
+
+####Data Exploration
+```{r}
+#Reading the dataset in R
+read_data <- read.csv("FlightDelays.csv")
+
+#Subsetting the data by selecting only the predictors that is been asked to use
+Flight_data <- subset(read_data, select= c(DAY_WEEK, ORIGIN, DEST, CARRIER, CRS_DEP_TIME, DEP_TIME, Flight.Status))
+
+summary(Flight_data)
+#After running the summary statistics we figured that we need to convert Week and Time variables into factors.
+```
+
+####Data Transformation
+```{r}
+#Week and Time variables need to recoded as factors
+names<- c('DAY_WEEK' , 'CRS_DEP_TIME', 'DEP_TIME')
+Flight_data[,names] <- lapply(Flight_data[,names], factor)
+summary(Flight_data)
+```
+
+####Data Partition
+```{r}
+#Dividing the data into 60% training and 40% validation
+set.seed(2019)
+#library(caret)
+#Divide data into validation and training
+Index_Train<-createDataPartition(Flight_data$CARRIER, p=0.6, list=FALSE) #Train Data
+Train_data <-Flight_data[Index_Train,] #1323 rows
+Test_data  <-Flight_data[-Index_Train,] #Validation Data(remaining) #878
+
+#NROW(Train) (number of rows in training data = 1323)
+#NROW(Test)  (number of rows in test data     = 878 )
+```
+
+####Training the data
+```{r}
+#Building Naive Bayes model 
+library(e1071)
+NB_training_model <- naiveBayes(Flight.Status ~. , data= Train_data )
+NB_training_model
+#First it shows the ratios of default (yes) and default (no) in the training set (called a priori probabilities)
+#Then it will give table for each target class, mean and standard deviation of the (sub-)variable. 
+```
+
+####Testing the data
+```{r}
+#Now, use the model on the test set
+
+#Predicting the default status of test dataset 
+Predicted_Test_labels <-predict(NB_training_model,Test_data)
+
+#library("gmodels")
+
+#Show the confusion matrix of the classifier
+CrossTable(x=Test_data$Flight.Status,y=Predicted_Test_labels, prop.chisq = FALSE) 
+```
+
+
+```{r}
+#Raw prediction probabilities rather than the predicted class
+
+nb_model <- naiveBayes(Flight.Status ~. , data= Train_data )
+
+#Make predictions and return probability of each class
+Predicted_Test_labels <-predict(NB_training_model,Test_data, type = "raw")
+
+#show the first few values 
+head(Predicted_Test_labels)
+```
+
+####ROC Curves
+```{r}
+# install.packages("pROC") # install if necessary
+library(pROC)
+#Passing the first column of the predicted probabilities 
+#That column contains the probability associate to 'delayed'
+roc(Test_data$Flight.Status, Predicted_Test_labels[,1]) #0.6602
+plot.roc(Test_data$Flight.Status, Predicted_Test_labels[,1])
+```
+
+####Confusion Matrix
+```{r}
+Predicted_Test_labels <-predict(NB_training_model,Test_data)
+Actual <- Test_data$Flight.Status
+table(Predicted_Test_labels,Actual)
+```
+
