@@ -1,6 +1,6 @@
 ---
 title: "Personal Loan Acceptance"
-author: "Sonal"
+author: "Sonal Kanabar"
 output: html_document
 ---
 
