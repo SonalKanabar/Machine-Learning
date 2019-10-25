@@ -134,13 +134,13 @@ $(document).ready(function () {
 <p>*Campaign of last year - conversion rate of 9.6% [Among the 5000 customers, only 480 (= 9.6%) accepted the personal loan that was offered to them in the earlier campaign.]</p>
 <p>*Goal : use k-NN to predict whether a new customer will accept a loan offer.</p>
 <ul>
-<li>data: 5000 customers</li>
+<li>Data (rows): 5000 customers</li>
 </ul>
-<p>*success class as 1 (loan acceptance)</p>
+<p>*Success class as 1 (loan acceptance)</p>
 <div id="packages-used" class="section level4">
 <h4>Packages used</h4>
-<pre class="r"><code>library(psych)
-library(caret)</code></pre>
+<pre class="r"><code>library(psych)  #for creating dummies
+library(caret)  #for data partition, normalize data</code></pre>
 <pre><code>## Loading required package: lattice</code></pre>
 <pre><code>## Loading required package: ggplot2</code></pre>
 <pre><code>## 
@@ -148,7 +148,7 @@ library(caret)</code></pre>
 <pre><code>## The following objects are masked from 'package:psych':
 ## 
 ##     %+%, alpha</code></pre>
-<pre class="r"><code>library(FNN)
+<pre class="r"><code>library(FNN)    #for Perfoming knn classification
 library(class)</code></pre>
 <pre><code>## 
 ## Attaching package: 'class'</code></pre>
@@ -174,7 +174,7 @@ df=subset(originaldata, select=-c(ID, ZIP.Code ))</code></pre>
 <pre class="r"><code>#creating dummies
 #library(psych)
 dummy_Education &lt;- as.data.frame(dummy.code(df$Education))
-names(dummy_Education) &lt;- c(&quot;Education_1&quot;, &quot;Education_2&quot;,&quot;Education_3&quot;) #renaiming dummy variable
+names(dummy_Education) &lt;- c(&quot;Education_1&quot;, &quot;Education_2&quot;,&quot;Education_3&quot;) #renaming dummy variable
 df_without_education &lt;- subset(df, select=-c(Education)) #eliminating education variable
 
 UBank_data &lt;- cbind(df_without_education, dummy_Education) #main dataset</code></pre>
@@ -184,8 +184,8 @@ UBank_data &lt;- cbind(df_without_education, dummy_Education) #main dataset</cod
 <pre class="r"><code>#Partitioning the data into Traning(60%) and Validation(40%)
 #library(caret)
 set.seed(2019)
-Train_Index = createDataPartition(UBank_data$Age, p= 0.6 , list=FALSE)
-Train_Data = UBank_data[Train_Index,]  #3001 observations
+Train_Index     = createDataPartition(UBank_data$Age, p= 0.6 , list=FALSE)
+Train_Data      = UBank_data[Train_Index,]  #3001 observations
 
 Validation_Data = UBank_data[-Train_Index,] #1999 observations</code></pre>
 </div>
@@ -195,64 +195,69 @@ Validation_Data = UBank_data[-Train_Index,] #1999 observations</code></pre>
 </div>
 <div id="data-normalization" class="section level4">
 <h4>Data Normalization</h4>
-<pre class="r"><code>head(Train_Data)</code></pre>
-<pre><code>##    Age Experience Income Family CCAvg Mortgage Personal.Loan
-## 7   53         27     72      2   1.5        0             0
-## 8   50         24     22      1   0.3        0             0
-## 9   35         10     81      3   0.6      104             0
-## 10  34          9    180      1   8.9        0             1
-## 11  65         39    105      4   2.4        0             0
-## 12  29          5     45      3   0.1        0             0
-##    Securities.Account CD.Account Online CreditCard Education_1 Education_2
-## 7                   0          0      1          0           0           1
-## 8                   0          0      0          1           0           0
-## 9                   0          0      1          0           0           1
-## 10                  0          0      0          0           0           0
-## 11                  0          0      0          0           0           0
-## 12                  0          0      1          0           0           1
-##    Education_3
-## 7            0
-## 8            1
-## 9            0
-## 10           1
-## 11           1
-## 12           0</code></pre>
-<pre class="r"><code>#Normalization
-normalize.data &lt;- function(x) {
-return ((x - min(x)) / (max(x) - min(x))) }
+<pre class="r"><code># Copy the original data
+train.norm.df    &lt;- Train_Data
+valid.norm.df    &lt;- Validation_Data
+test.norm.df     &lt;- Test_Data
+maindata.norm.df &lt;- UBank_data
 
-train.norm.df &lt;- as.data.frame(lapply(Train_Data,normalize.data)) #training data
-valid.norm.df &lt;- as.data.frame(lapply(Validation_Data,normalize.data)) #validation data
-
-maindata.norm.df &lt;- as.data.frame(lapply(UBank_data,normalize.data)) #[training + vaidation data]
-
-head(train.norm.df)</code></pre>
-<pre><code>##         Age Experience     Income    Family CCAvg  Mortgage Personal.Loan
-## 1 0.6818182  0.6521739 0.29629630 0.3333333  0.15 0.0000000             0
-## 2 0.6136364  0.5869565 0.06481481 0.0000000  0.03 0.0000000             0
-## 3 0.2727273  0.2826087 0.33796296 0.6666667  0.06 0.1637795             0
-## 4 0.2500000  0.2608696 0.79629630 0.0000000  0.89 0.0000000             1
-## 5 0.9545455  0.9130435 0.44907407 1.0000000  0.24 0.0000000             0
-## 6 0.1363636  0.1739130 0.17129630 0.6666667  0.01 0.0000000             0
+head(maindata.norm.df)</code></pre>
+<pre><code>##   Age Experience Income Family CCAvg Mortgage Personal.Loan
+## 1  25          1     49      4   1.6        0             0
+## 2  45         19     34      3   1.5        0             0
+## 3  39         15     11      1   1.0        0             0
+## 4  35          9    100      1   2.7        0             0
+## 5  35          8     45      4   1.0        0             0
+## 6  37         13     29      4   0.4      155             0
 ##   Securities.Account CD.Account Online CreditCard Education_1 Education_2
-## 1                  0          0      1          0           0           1
-## 2                  0          0      0          1           0           0
-## 3                  0          0      1          0           0           1
-## 4                  0          0      0          0           0           0
-## 5                  0          0      0          0           0           0
+## 1                  1          0      0          0           1           0
+## 2                  1          0      0          0           1           0
+## 3                  0          0      0          0           1           0
+## 4                  0          0      0          0           0           1
+## 5                  0          0      0          1           0           1
 ## 6                  0          0      1          0           0           1
 ##   Education_3
 ## 1           0
-## 2           1
+## 2           0
 ## 3           0
-## 4           1
-## 5           1
+## 4           0
+## 5           0
 ## 6           0</code></pre>
+<pre class="r"><code># use preProcess() from the caret package to normalize .
+norm.values &lt;- preProcess(Train_Data[,-7], method=c(&quot;center&quot;, &quot;scale&quot;))
+
+train.norm.df[,-7] &lt;- predict(norm.values, Train_Data[,-7])  #Training Data
+valid.norm.df [,-7]&lt;- predict(norm.values, Validation_Data[,-7])#Validation Data
+test.norm.df &lt;- predict(norm.values, Test_Data)#Test Data
+maindata.norm.df[,-7] &lt;- predict(norm.values,UBank_data[,-7]) #Training + Validation data
+
+head(maindata.norm.df)</code></pre>
+<pre><code>##           Age Experience     Income     Family      CCAvg   Mortgage
+## 1 -1.78349058 -1.6792918 -0.5542657  1.3579919 -0.1887992 -0.5470800
+## 2 -0.03126677 -0.0984479 -0.8803150  0.4969453 -0.2463691 -0.5470800
+## 3 -0.55693391 -0.4497465 -1.3802573 -1.2251479 -0.5342189 -0.5470800
+## 4 -0.90737867 -0.9766945  0.5543019 -1.2251479  0.4444704 -0.5470800
+## 5 -0.90737867 -1.0645192 -0.6412122  1.3579919 -0.5342189 -0.5470800
+## 6 -0.73215629 -0.6253959 -0.9889981  1.3579919 -0.8796387  0.9670062
+##   Personal.Loan Securities.Account CD.Account     Online CreditCard
+## 1             0           2.940516 -0.2584769 -1.2197932 -0.6528313
+## 2             0           2.940516 -0.2584769 -1.2197932 -0.6528313
+## 3             0          -0.339963 -0.2584769 -1.2197932 -0.6528313
+## 4             0          -0.339963 -0.2584769 -1.2197932 -0.6528313
+## 5             0          -0.339963 -0.2584769 -1.2197932  1.5312788
+## 6             0          -0.339963 -0.2584769  0.8195379 -0.6528313
+##   Education_1 Education_2 Education_3
+## 1   1.1664816  -0.6316127  -0.6409138
+## 2   1.1664816  -0.6316127  -0.6409138
+## 3   1.1664816  -0.6316127  -0.6409138
+## 4  -0.8569932   1.5827211  -0.6409138
+## 5  -0.8569932   1.5827211  -0.6409138
+## 6  -0.8569932   1.5827211  -0.6409138</code></pre>
 </div>
-<div id="perfoming-knn-classification" class="section level4">
-<h4>Perfoming knn classification</h4>
+<div id="perfoming-k-nn-classification-using-k-1" class="section level4">
+<h4>Perfoming k-NN classification , using k = 1</h4>
 <pre class="r"><code>#library(FNN)
-set.seed(7777)
+set.seed(2019)
 prediction &lt;- knn(train = train.norm.df[,-7], test = valid.norm.df[,-7], 
           cl = train.norm.df[,7], k = 1, prob=TRUE) 
 actual= valid.norm.df$Personal.Loan
@@ -260,21 +265,22 @@ prediction_prob = attr(prediction,&quot;prob&quot;)
 
 
 
-#Answer 3: confusion matrix for the best k value =1
 table(prediction,actual)  </code></pre>
 <pre><code>##           actual
 ## prediction    0    1
-##          0 1791   54
-##          1   25  129</code></pre>
-<pre class="r"><code>mean(prediction==actual)  #accuracy of the best k=1</code></pre>
-<pre><code>## [1] 0.9604802</code></pre>
+##          0 1788   61
+##          1   28  122</code></pre>
+<pre class="r"><code>mean(prediction==actual)  </code></pre>
+<pre><code>## [1] 0.9554777</code></pre>
 <pre class="r"><code>#library(class)
 NROW(train.norm.df)</code></pre>
 <pre><code>## [1] 3001</code></pre>
 <pre class="r"><code>sqrt(3001)</code></pre>
 <pre><code>## [1] 54.78138</code></pre>
-<pre class="r"><code># genearting loop to find best k
-#library(caret)
+</div>
+<div id="generating-loop-to-find-best-k" class="section level4">
+<h4>Generating loop to find best k</h4>
+<pre class="r"><code>#library(caret)
 #library(FNN)
 
 accuracy.df &lt;- data.frame(k = seq(1, 60, 1), accuracy = rep(0, 60))
@@ -290,72 +296,93 @@ accuracy.df[i,2] &lt;- mean(prediction==actual)
 }
 accuracy.df  </code></pre>
 <pre><code>##     k  accuracy
-## 1   1 0.9604802
-## 2   2 0.9534767
-## 3   3 0.9569785
-## 4   4 0.9544772
-## 5   5 0.9559780
-## 6   6 0.9549775
-## 7   7 0.9509755
-## 8   8 0.9489745
-## 9   9 0.9439720
-## 10 10 0.9434717
-## 11 11 0.9429715
-## 12 12 0.9424712
-## 13 13 0.9414707
-## 14 14 0.9409705
-## 15 15 0.9399700
-## 16 16 0.9369685
-## 17 17 0.9354677
-## 18 18 0.9339670
-## 19 19 0.9339670
-## 20 20 0.9334667
-## 21 21 0.9309655
-## 22 22 0.9334667
-## 23 23 0.9324662
-## 24 24 0.9299650
-## 25 25 0.9274637
-## 26 26 0.9259630
-## 27 27 0.9264632
-## 28 28 0.9254627
-## 29 29 0.9249625
-## 30 30 0.9244622
-## 31 31 0.9249625
-## 32 32 0.9229615
-## 33 33 0.9229615
-## 34 34 0.9214607
-## 35 35 0.9209605
-## 36 36 0.9209605
-## 37 37 0.9199600
-## 38 38 0.9194597
-## 39 39 0.9184592
-## 40 40 0.9164582
-## 41 41 0.9154577
-## 42 42 0.9154577
-## 43 43 0.9144572
-## 44 44 0.9149575
-## 45 45 0.9154577
-## 46 46 0.9154577
-## 47 47 0.9159580
-## 48 48 0.9154577
-## 49 49 0.9144572
-## 50 50 0.9139570
-## 51 51 0.9139570
-## 52 52 0.9139570
-## 53 53 0.9134567
-## 54 54 0.9139570
-## 55 55 0.9134567
-## 56 56 0.9119560
-## 57 57 0.9124562
-## 58 58 0.9124562
-## 59 59 0.9119560
-## 60 60 0.9119560</code></pre>
-<div id="answer-2-the-value-of-k-we-choose-is-1-as-it-provides-the-best-result" class="section level5">
-<h5>Answer 2: The value of k we choose is 1 as it provides the best result</h5>
+## 1   1 0.9554777
+## 2   2 0.9544772
+## 3   3 0.9629815
+## 4   4 0.9594797
+## 5   5 0.9594797
+## 6   6 0.9574787
+## 7   7 0.9574787
+## 8   8 0.9559780
+## 9   9 0.9564782
+## 10 10 0.9539770
+## 11 11 0.9529765
+## 12 12 0.9509755
+## 13 13 0.9524762
+## 14 14 0.9529765
+## 15 15 0.9494747
+## 16 16 0.9504752
+## 17 17 0.9494747
+## 18 18 0.9489745
+## 19 19 0.9489745
+## 20 20 0.9484742
+## 21 21 0.9484742
+## 22 22 0.9479740
+## 23 23 0.9469735
+## 24 24 0.9474737
+## 25 25 0.9474737
+## 26 26 0.9479740
+## 27 27 0.9474737
+## 28 28 0.9479740
+## 29 29 0.9464732
+## 30 30 0.9469735
+## 31 31 0.9469735
+## 32 32 0.9454727
+## 33 33 0.9469735
+## 34 34 0.9459730
+## 35 35 0.9454727
+## 36 36 0.9444722
+## 37 37 0.9439720
+## 38 38 0.9444722
+## 39 39 0.9429715
+## 40 40 0.9429715
+## 41 41 0.9424712
+## 42 42 0.9394697
+## 43 43 0.9394697
+## 44 44 0.9394697
+## 45 45 0.9394697
+## 46 46 0.9399700
+## 47 47 0.9384692
+## 48 48 0.9384692
+## 49 49 0.9369685
+## 50 50 0.9359680
+## 51 51 0.9359680
+## 52 52 0.9359680
+## 53 53 0.9364682
+## 54 54 0.9364682
+## 55 55 0.9369685
+## 56 56 0.9374687
+## 57 57 0.9374687
+## 58 58 0.9369685
+## 59 59 0.9369685
+## 60 60 0.9369685</code></pre>
+<div id="answer-2-the-value-of-k-we-choose-is-3-as-it-provides-the-best-result-i.e-the-choice-of-k-that-balances-between-overfitting-and-ignoring-the-predictor-information" class="section level5">
+<h5>Answer 2: The value of k we choose is 3 as it provides the best result [i.e the choice of k that balances between overfitting and ignoring the predictor information]</h5>
 </div>
 </div>
-<div id="perfominng-knn-classification-on-test-data" class="section level4">
-<h4>perfominng knn classification on test data</h4>
+<div id="validation-data-results-using-best-k-value-i.e-k-3" class="section level4">
+<h4>Validation data results using best k value [i.e: k = 3]</h4>
+<pre class="r"><code>#library(FNN)
+set.seed(2019)
+prediction &lt;- knn(train = train.norm.df[,-7], test = valid.norm.df[,-7], 
+          cl = train.norm.df[,7], k = 3, prob=TRUE) 
+actual= valid.norm.df$Personal.Loan
+prediction_prob = attr(prediction,&quot;prob&quot;)
+
+
+
+#Answer 3: confusion matrix for the best k value =3
+table(prediction,actual)  </code></pre>
+<pre><code>##           actual
+## prediction    0    1
+##          0 1809   67
+##          1    7  116</code></pre>
+<pre class="r"><code>#accuracy of the best k=3
+mean(prediction==actual)  </code></pre>
+<pre><code>## [1] 0.9629815</code></pre>
+</div>
+<div id="classifying-the-customer-using-the-best-k-perfominng-k-nn-classification-on-test-data" class="section level4">
+<h4>Classifying the customer using the best k [perfominng k-NN classification on test data]</h4>
 <pre class="r"><code>#library(FNN)
 prediction_test &lt;- knn(train = maindata.norm.df[,-7], test = Test_Data, 
           cl = maindata.norm.df[,7], k = 1, prob=TRUE) 
@@ -364,8 +391,8 @@ prediction_test &lt;- knn(train = maindata.norm.df[,-7], test = Test_Data,
 head(prediction_test)</code></pre>
 <pre><code>## [1] 1
 ## Levels: 0 1</code></pre>
-<div id="answer-4-the-customer-will-accept-the-loan-offer-loan-accepted" class="section level5">
-<h5>Answer 4: The customer will accept the loan offer [loan accepted]</h5>
+<div id="answer-4-k-nn-model-predicted-that-the-new-customer-will-accept-a-loan-offer-loan-accepted" class="section level5">
+<h5>Answer 4: k-NN model predicted that the new customer will accept a loan offer [loan accepted]</h5>
 </div>
 </div>
 <div id="question-5" class="section level4">
@@ -375,7 +402,7 @@ head(prediction_test)</code></pre>
 #Partitioning the data into Traning(50%) ,Validation(30%), Test(20%)
 #library(dplyr)
 #library(caret)
-set.seed(2000)
+set.seed(2019)
 
 Test_Index_1 = createDataPartition(UBank_data$Age, p= 0.2 , list=FALSE) #20% test data 
 Test_Data_1  = UBank_data [Test_Index_1,]
@@ -383,51 +410,86 @@ Test_Data_1  = UBank_data [Test_Index_1,]
 Rem_DATA = UBank_data[-Test_Index_1,] #80% remaining data [training + validation]
 
 Train_Index_1 = createDataPartition(Rem_DATA$Age, p= 0.5 , list=FALSE)
-Train_Data_1 = Rem_DATA[Train_Index_1,] 
+Train_Data_1 = Rem_DATA[Train_Index_1,] #Training data
 
-Validation_Data_1 = Rem_DATA[-Train_Index_1,] </code></pre>
-<pre class="r"><code>#Normalization
-normalize.data &lt;- function(x) {
-return ((x - min(x)) / (max(x) - min(x))) }
+Validation_Data_1 = Rem_DATA[-Train_Index_1,] #Validation data</code></pre>
+<pre class="r"><code>#Data Normalization
 
-train.norm.df_1 &lt;- as.data.frame(lapply(Train_Data_1,normalize.data)) #training data
-valid.norm.df_1 &lt;- as.data.frame(lapply(Validation_Data_1,normalize.data)) #validation data
-test.norm.df_1  &lt;- as.data.frame(lapply(Test_Data_1,normalize.data)) #test data
-rem_data.norm.df_1 &lt;- as.data.frame(lapply(Rem_DATA,normalize.data)) #training and validation data
 
-#head(train.norm.df_1)
-#head(valid.norm.df_1)
-#head(test.norm.df_1)</code></pre>
-<pre class="r"><code>#perfominng knn classification on Training Data
+# Copy the original data
+train.norm.df_1 &lt;- Train_Data_1
+valid.norm.df_1 &lt;- Validation_Data_1
+test.norm.df_1 &lt;- Test_Data_1
+rem_data.norm.df_1 &lt;- Rem_DATA
+
+# use preProcess() from the caret package to normalize Sales and Age.
+norm.values_1 &lt;- preProcess(Train_Data_1[-7], method=c(&quot;center&quot;, &quot;scale&quot;))
+
+train.norm.df_1[-7] &lt;- predict(norm.values_1, Train_Data_1[-7])  #Training Data
+valid.norm.df_1[-7] &lt;- predict(norm.values_1, Validation_Data_1[-7])#Validation Data
+test.norm.df_1[-7] &lt;- predict(norm.values_1, test.norm.df_1[-7]) #Test Data
+test.norm.df_1[-7] &lt;- predict(norm.values_1, Test_Data_1[-7])
+rem_data.norm.df_1[-7] &lt;- predict(norm.values_1,Rem_DATA[-7]) #Training + Validation data
+
+head(test.norm.df_1)</code></pre>
+<pre><code>##            Age   Experience     Income     Family      CCAvg   Mortgage
+## 10 -0.98437646 -0.961507699  2.3590151 -1.2221124  4.1272750 -0.5745512
+## 12 -1.41992199 -1.309627793 -0.6339274  0.5212719 -1.0680532 -0.5745512
+## 16  1.28046031  0.866122793 -1.1438361 -1.2221124 -0.2415237 -0.5745512
+## 18 -0.28750361 -0.178237488  0.1641906  1.3929641  0.2898167 -0.5745512
+## 28  0.06093282 -0.004177441  1.8712763 -1.2221124  0.2898167 -0.5745512
+## 30 -0.63594003 -0.613387605  1.0066485 -1.2221124  0.8211571 -0.5745512
+##    Personal.Loan Securities.Account CD.Account     Online CreditCard
+## 10             1         -0.3267315 -0.2480733 -1.2092653  -0.638166
+## 12             0         -0.3267315 -0.2480733  0.8265349  -0.638166
+## 16             0         -0.3267315 -0.2480733  0.8265349   1.566207
+## 18             0         -0.3267315 -0.2480733 -1.2092653  -0.638166
+## 28             0         -0.3267315 -0.2480733  0.8265349   1.566207
+## 30             1         -0.3267315  4.0290518  0.8265349   1.566207
+##    Education_1 Education_2 Education_3
+## 10  -0.8188457  -0.6226806   1.4607289
+## 12  -0.8188457   1.6051569  -0.6842474
+## 16  -0.8188457  -0.6226806   1.4607289
+## 18   1.2206206  -0.6226806  -0.6842474
+## 28   1.2206206  -0.6226806  -0.6842474
+## 30  -0.8188457   1.6051569  -0.6842474</code></pre>
+<pre class="r"><code>#Perfoming k-NN classification on Training Data, k = 3
+
+
 #library(FNN)
-set.seed(45477)
+set.seed(2019)
 prediction_Q5 &lt;- knn(train = train.norm.df_1[,-7], test = valid.norm.df_1[,-7], 
-          cl = train.norm.df_1[,7], k = 1, prob=TRUE) 
+          cl = train.norm.df_1[,7], k = 3, prob=TRUE) 
 actual= valid.norm.df_1$Personal.Loan
 prediction_prob = attr(prediction_Q5,&quot;prob&quot;)
 
-table(prediction_Q5,actual)  #confusion matrix for the best k value =1</code></pre>
+table(prediction_Q5,actual)  #confusion matrix for the best k value =3</code></pre>
 <pre><code>##              actual
 ## prediction_Q5    0    1
-##             0 1807   57
-##             1   12  123</code></pre>
-<pre class="r"><code>mean(prediction_Q5==actual)  #accuracy of the best k=1</code></pre>
-<pre><code>## [1] 0.9654827</code></pre>
-<pre class="r"><code>#perfominng knn classification on Test Data
+##             0 1805   72
+##             1    4  118</code></pre>
+<pre class="r"><code>mean(prediction_Q5==actual)  #accuracy of the best k=3</code></pre>
+<pre><code>## [1] 0.961981</code></pre>
+<pre class="r"><code>#Perfoming k-NN classification on Test Data, k = 3
+
+
 library(FNN)
-set.seed(45477)
+set.seed(2019)
 prediction_Q5 &lt;- knn(train = rem_data.norm.df_1[,-7], test = test.norm.df_1[,-7], 
-          cl = rem_data.norm.df_1[,7], k = 1, prob=TRUE) 
+          cl = rem_data.norm.df_1[,7], k = 3, prob=TRUE) 
 actual= test.norm.df_1$Personal.Loan
 prediction_prob = attr(prediction_Q5,&quot;prob&quot;)
 
-table(prediction_Q5,actual)  #confusion matrix for the best k value =1</code></pre>
+table(prediction_Q5,actual)  #confusion matrix for the best k value =3</code></pre>
 <pre><code>##              actual
 ## prediction_Q5   0   1
-##             0 884  22
-##             1  15  80</code></pre>
-<pre class="r"><code>mean(prediction_Q5==actual)  #accuracy of the best k=1</code></pre>
-<pre><code>## [1] 0.963037</code></pre>
+##             0 904  37
+##             1   1  59</code></pre>
+<pre class="r"><code>mean(prediction_Q5==actual)  #accuracy of the best k=3</code></pre>
+<pre><code>## [1] 0.962038</code></pre>
+<div id="the-model-performed-better-in-the-test-set-as-it-got-enough-data-to-learn-from-i.e-80-of-the-data-whereas-when-we-were-working-on-training-data-it-only-learned-from-50-of-the-data." class="section level5">
+<h5>The model performed better in the test set, as it got enough data to learn from i.e 80% of the data, Whereas when we were working on training data it only learned from 50% of the data.</h5>
+</div>
 </div>
 </div>
 
