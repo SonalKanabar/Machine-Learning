@@ -55,20 +55,20 @@ summary(Flight_data)
 set.seed(2019)
 #library(caret)
 #Divide data into validation and training
-Index_Train<-createDataPartition(Flight_data$CARRIER, p=0.6, list=FALSE) #Train Data
+Index_Train<-createDataPartition(Flight_data$CRS_DEP_TIME, p=0.6, list=FALSE) #Train Data
 Train_data <-Flight_data[Index_Train,] #1323 rows
 Test_data  <-Flight_data[-Index_Train,] #Validation Data(remaining) #878
 
-#NROW(Train) (number of rows in training data = 1323)
-#NROW(Test)  (number of rows in test data     = 878 )
+#NROW(Train_data) #(number of rows in training data = 1345)
+#NROW(Test_data)  #(number of rows in test data     = 856 )
 ```
 
 ####Training the data
 ```{r}
 #Building Naive Bayes model 
-library(e1071)
+#library(e1071)
 NB_training_model <- naiveBayes(Flight.Status ~. , data= Train_data )
-NB_training_model
+#NB_training_model #prints the result
 #First it shows the ratios of default (yes) and default (no) in the training set (called a priori probabilities)
 #Then it will give table for each target class, mean and standard deviation of the (sub-)variable. 
 ```
@@ -93,7 +93,7 @@ CrossTable(x=Test_data$Flight.Status,y=Predicted_Test_labels, prop.chisq = FALSE
 nb_model <- naiveBayes(Flight.Status ~. , data= Train_data )
 
 #Make predictions and return probability of each class
-Predicted_Test_labels <-predict(NB_training_model,Test_data, type = "raw")
+Predicted_Test_labels <-predict(nb_model,Test_data, type = "raw")
 
 #show the first few values 
 head(Predicted_Test_labels)
@@ -101,11 +101,11 @@ head(Predicted_Test_labels)
 
 ####ROC Curves
 ```{r}
-# install.packages("pROC") # install if necessary
-library(pROC)
+#install.packages("pROC") # install if necessary
+#library(pROC)
 #Passing the first column of the predicted probabilities 
 #That column contains the probability associate to 'delayed'
-roc(Test_data$Flight.Status, Predicted_Test_labels[,1]) #0.6602
+roc(Test_data$Flight.Status, Predicted_Test_labels[,1]) #0.7367
 plot.roc(Test_data$Flight.Status, Predicted_Test_labels[,1])
 ```
 
