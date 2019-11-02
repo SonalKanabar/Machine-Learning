@@ -1,0 +1,252 @@
+---
+title: " Clustering Universities "
+author: "Sonal Kanabar"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Project Background:
+
+
+* Dataset on 1302 American Colleges and Universities offering an undergraduate program.
+
+
+* 20 variables in total: 17 being continuous and 3 being categorical.
+
+
+* There is lot of data inconsistency/noise- i.e we have 831 rows with missing values in some or the other column.
+
+
+####Libraries Used
+```{r}
+library(caret)        #for data normalization
+library(factoextra)   #for scaling data
+library(tidyverse)
+library(ISLR)
+library(flexclust)    #for calculating manhattan distance
+
+```
+
+####Importing the dataset in R
+```{r}
+mydata <- read.csv("Universities.csv")
+#View(mydata)
+#head(mydata)
+```
+
+####Removing all records with missing mesurements
+```{r}
+Data_without_na <- na.omit(mydata) #831 rows eliminated
+#head(Data_without_na)             #471 rows left in the dataset
+#write.csv(Data_without_na,'data_without_na.csv')
+```
+
+####Eliminating categorical variables 
+```{r}
+continuous_data <- subset(Data_without_na,select =  -c(College.Name,State,Public..1...Private..2.))
+#head(continuous_data)
+#we have 17 variables left and 471 observations in the dataset 
+```
+
+####Normalizing dataset
+```{r}
+#library(factoextra)
+#Scaling the data frame (z-score) 
+universities_data <- as.data.frame(scale(continuous_data)) 
+#summary(universities_data)
+head(universities_data) #data after normalization
+```
+
+####Within Sum of Squares[WSS]
+
+######Determining value of k
+
+```{r}
+#using "elbow chart" to determine k
+set.seed(2502)
+fviz_nbclust(universities_data, kmeans, method = "wss")
+```
+
+
+########*The chart shows that the elbow point 3 provides the best value for k. Here, the elbow point provides that compromise where WSS, while still decreasing beyond k = 3, decreases at a much smaller rate. In other words, adding more clusters beyond 3 brings less improvement to cluster homogeneity.
+
+########*Optimal value for k = 3.
+
+####Silhouette Method
+
+######Determine the number of clusters
+```{r}
+fviz_nbclust(universities_data, kmeans, method = "silhouette")
+
+```
+
+######## *2 is the ideal number of clusters. Here we look for large values for the Silhouette Width (Y Axis)
+
+
+#######Taking value of k as 3 / number of clusters as 3    
+
+####Running K-Means clustering using Euclidean distance
+```{r}
+#taking the value Of k=3 
+set.seed(2502)
+k3 <- kmeans(universities_data, centers = 3, nstart = 25)# k = 3, number of restarts = 25
+#k3
+#summary(k3) 
+#k3$centers
+#str(k3)
+#k3$size #size of each cluster
+fviz_cluster(k3, data = universities_data) ###Visualize cluster plot
+
+```
+
+####Running K-means using Manhattan Distance
+```{r}
+library(flexclust)
+set.seed(2502)
+#kmeans clustering, using manhattan distance
+k3 = kcca(universities_data, k=3, kccaFamily("kmedians"))
+k3
+#Apply the predict() function
+clusters <- predict(k3)
+dist(k3@centers)
+image(k3)
+points(universities_data, col=clusters, pch=3, cex=0.3)
+
+cluster_data = data.frame(clusters) #puttting cluster in a data frame
+data_clust <- cbind(Data_without_na,cluster_data)
+head(data_clust)
+```
+
+####Summary statistics of each cluster
+```{r}
+set.seed(2502)
+Statistics_Cluster <- data_clust %>% 
+    group_by( clusters ) %>%
+    summarise( Univ_InState_Max_Fee= data_clust[which.max(in.state.tuition),1],Univ_OutState_Max_Fee=data_clust[which.max(out.of.state.tuition),1],low_accept_rate=data_clust[which.min(X..appl..accepted),1],Acceptance_rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_out_state_tuition=mean(out.of.state.tuition), Avg_int_state_tuition=mean(in.state.tuition), mean_PHD_fac=mean(X..fac..w.PHD), mean_stud_fac_ratio=mean(stud..fac..ratio), mean_grad_rate=mean(Graduation.rate), priv_count = sum(Public..1...Private..2. == 2), pub_count = sum(Public..1...Private..2. == 1))
+head(Statistics_Cluster)
+```
+
+
+####Identifying relationship between clusters and categorical information.
+```{r}
+#Summary Statistics for Private Universities
+
+Private_Statistics <- data_clust %>% 
+    filter(Public..1...Private..2. == 2) %>%
+    group_by( clusters) %>%
+    summarise( Univ_InState_Max_Fee=data_clust[which.max(in.state.tuition),1],Univ_OutState_Max_Fee=data_clust[which.max(out.of.state.tuition),1],low_accept_rate=data_clust[which.min(X..appl..accepted),1],Acceptance_rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_out_state_tuition=mean(out.of.state.tuition), Avg_int_state_tuition=mean(in.state.tuition), mean_PHD_fac=mean(X..fac..w.PHD), mean_stud_fac_ratio=mean(stud..fac..ratio), mean_grad_rate=mean(Graduation.rate))
+head(Private_Statistics)
+```
+
+
+```{r}
+#Summary Statistics for Public Universities
+
+Public_statistics <- data_clust %>% 
+    filter(Public..1...Private..2. == 1) %>%
+    group_by( clusters ) %>%
+    summarise(Univ_InState_Max_Fee=data_clust[which.max(in.state.tuition),1],Univ_OutState_Max_Fee=data_clust[which.max(out.of.state.tuition),1],low_accept_rate=data_clust[which.min(X..appl..accepted),1], Acceptance_rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_out_state_tuition=mean(out.of.state.tuition), Avg_int_state_tuition=mean(in.state.tuition), mean_PHD_fac=mean(X..fac..w.PHD), mean_stud_fac_ratio=mean(stud..fac..ratio), mean_grad_rate=mean(Graduation.rate))
+head(Public_statistics)
+```
+
+```{r}
+#Summary Statistics For States
+
+States_Statistics<-data_clust %>% 
+             group_by(State) %>%        summarise(Univ_InState_Max_Fee=data_clust[which.max(in.state.tuition),1],Univ_OutState_Max_Fee=data_clust[which.max(out.of.state.tuition),1],low_accept_rate=data_clust[which.min(X..appl..accepted),1],Acceptance_rate = sum(X..appl..accepted)/ sum(X..appli..rec.d), Avg_out_state_tuition=mean(out.of.state.tuition), Avg_int_state_tuition=mean(in.state.tuition), mean_PHD_fac=mean(X..fac..w.PHD), mean_stud_fac_ratio=mean(stud..fac..ratio), mean_grad_rate=mean(Graduation.rate), priv_count = sum(Public..1...Private..2. == 2), pub_count = sum(Public..1...Private..2. == 1))
+
+head(States_Statistics)
+
+```
+####Insights and Information
+```{r}
+#(Answer to questions C, D & E)
+
+# 1. We observed that there is high acceptance rate in cluster 1
+# 2. Tutions are highests in cluster 3 , both out of state and in state and the pattern is same for both the categorical data i.e for private as well as public universities
+# 3. Highest number/count of private  universties falled under cluster 1
+# 4. We also found a relation in tution an acceptance rate. Cluster 3 had high tution   rate in all the clusters and maybe that's the reason it had low acceptance rate out     of all the three clusters 
+# 5. Cluster 1 has highest number of observation (227), followed by cluster 3 (140) and then cluster 2 (104)
+# 6. Mean PHD ratio is high in 3rd cluster
+# 7. Cluster 1 has highest count of private universities whereas cluster 2 has highest  count of public universities
+# 8. Acceptance rate is lowest for 3rd cluster
+
+```
+
+####Tufts University
+```{r}
+set.seed(2502)
+#centers for clusters
+k3 <- kmeans(universities_data, centers = 3, nstart = 25)
+##Isolating the data to Tufts University
+library(dplyr)
+library(stats)
+
+set.seed(2502)
+Tufts_University <- filter(mydata, College.Name == "Tufts University")
+#Euclidean distance from Cluster 1
+dist(rbind(Tufts_University[, -c(1, 2, 3, 10)], k3$centers[1,]))
+```
+```{r}
+##Euclidean distance from Cluster 2
+dist(rbind(Tufts_University[, -c(1, 2, 3, 10)], k3$centers[2,]))
+```
+```{r}
+#Euclidean distance from Cluster 3
+dist(rbind(Tufts_University[, -c(1, 2, 3, 10)], k3$centers[3,]))
+```
+
+########Euclidean distance of Cluster 2 is smallest(closest) to the Tufts University.
+
+```{r}
+library(dplyr)
+clus <- filter(data_clust, clusters == 1)
+clus_Avg <- mean(clus[,c(10)])
+Tufts_University[, c(10)] <- clus_Avg
+Tufts_University[, c(10)]
+```
+
+#######The Missing Value in Tufts University is 415.3656.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############Reference for reading : 
+*https://www.datanovia.com/en/lessons/k-means-clustering-in-r-algorith-and-practical-examples/
+*https://www.datacamp.com/community/tutorials/hierarchical-clustering-R
