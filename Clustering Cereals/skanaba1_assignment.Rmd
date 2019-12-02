@@ -1,0 +1,234 @@
+---
+title: "Clustering Cereals"
+author: "Sonal Kanabar"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###Project Information
+*The dataset Cereals includes nutritional information, store display, and consumer ratings for 77 breakfast cereals.
+
+*Applyed hierarchical clustering to the data 
+
+*Used Agnes to compare the clustering
+
+*Structure of the clusters and on their stability.
+
+
+
+```{r}
+rm(list= ls(all=TRUE))
+```
+
+
+####Packages Used
+```{r  , message=FALSE}
+library(dplyr)  
+library(factoextra) 
+library(NbClust)
+library(cluster)
+library(fpc)
+```
+
+
+####Data Exploration
+```{r}
+#Importing dataset in R 
+mydata<- read.csv("Cereals.csv", header = T)
+
+#Insights and information from the dataset
+#head(mydata)
+#str(mydata)
+```
+
+
+####Data Preparation
+```{r}
+#Eliminating unwanted variables from dataset
+
+mydata <- select(mydata ,-c('type','mfr'))  
+#head(mydata)
+
+#giving row number as the name of the cereal and then eliminating the variable name from the dataset to avoid redundency 
+rownames(mydata) <- mydata$name
+mydata$name = NULL 
+
+
+```
+
+####Data normalization
+
+```{r}
+cereal_data <- as.data.frame(scale(mydata))
+#head(cereal_data)
+```
+
+
+####Data Preprocessing
+
+```{r}
+sum(is.na(cereal_data)) #to check if there are any missing values in the dataset
+
+cereal_data <- na.omit(cereal_data) #Eliminating rows with missing values 
+#sum(is.na(cereal_data))
+```
+
+####Hierarchical Clustering
+
+```{r}
+set.seed(2019)
+dist_mat <- dist(cereal_data, method = 'euclidean')
+hclust_single <- hclust(dist_mat,method = 'single')
+plot(hclust_single, cex =0.6, hang = -1)#Single-linkage: calculates the minimum distance between the clusters before merging. This linkage may be used to detect high values in your dataset which may be outliers as they will be merged at the end.
+hclust_complete <- hclust(dist_mat,method = 'complete')
+plot(hclust_complete, cex =0.6, hang = -1)#Complete-linkage: calculates the maximum distance between clusters before merging.
+hclust_avg <- hclust(dist_mat, method = 'average')
+plot(hclust_avg, cex =0.6, hang = -1)#Average-linkage: calculates the average distance between clusters before merging.
+
+hclust_ward <- hclust(dist_mat, method = 'ward.D')
+plot(hclust_ward, cex =0.6, hang = -1)#Ward's Method: it forms clusters in a manner that minimizes the loss associated with each cluster. 
+```
+
+###Answer 1: Choosing the best method
+
+*Agnes function gives agglomerative coefficient which measures the amount of clustering structure found. Values closer to 1 suggest strong clustering structure
+
+
+*Therefore the best Linkage method is "Ward linkage with 0.9049881"
+```{r}
+library(cluster)
+df <- dist(cereal_data, method = 'euclidean')
+
+hc_single <- agnes(df, method = "single")
+print(hc_single$ac)
+
+hc_complete <- agnes(df, method = "complete")
+print(hc_complete$ac)
+
+hc_average <- agnes(df, method = "average")
+print(hc_average$ac)
+
+hc_ward <- agnes(df, method = "ward")
+print(hc_ward$ac)
+```
+
+
+####Number of clusters to choose
+
+* Using Kmeans clustering
+
+* We will choose 5 as our cluster.
+
+
+```{r}
+set.seed(2019)
+kmeans_cereals <- kmeans(cereal_data, centers = 2)
+#str(kmeans_cereals)
+fviz_cluster(kmeans_cereals, cereal_data)
+
+wss<- 0
+for (i in 1:10) {
+  
+  cfit = kmeans(cereal_data, centers = i)
+  
+  # Store the sum of within sum of square
+  
+  wss[i] <- sum(cfit$withinss)
+  
+}
+plot(1:10, wss, type = "b")
+#print(wss)
+```
+
+
+```{r}
+set.seed(2019)
+fviz_nbclust(cereal_data,kmeans, method = "wss")
+```
+
+
+
+####Structure of the cluster and their stability
+```{r}
+set.seed(2019)
+km_clust <- kmeans(cereal_data, 5, nstart = 10)
+
+# after choosing k as 5, let's store the cluster groupings along with the data in a new data frame
+
+km_points <- km_clust$cluster
+
+# Store the cluster assignments in a new data frame
+
+cereal_clust <- as.data.frame(cbind(km_clust$cluster, cereal_data))
+colnames(cereal_clust)[1] <- "cluster"
+
+#head(cereal_clust)
+#tail(cereal_clust)
+#print(cereal_clust)
+
+#We can visualise the clusters by plotting the data using the fviz_cluster() function which plots the points on the first two principal components
+fviz_cluster(km_clust, cereal_data)
+```
+
+```{r}
+print_clusters <- function(labels, k) {             
+  for(i in 1:5) {
+    print(paste("cluster", i))
+    print(cereal_clust[labels==i,c("cluster","calories" ,"protein" , "fat" ,     "sodium"  , "fiber"  , "carbo"  ,  "sugars"  , "potass"  , "vitamins" ,"shelf" ,   "weight"  , "cups"  ,   "rating"  )])
+  }
+}
+
+
+# get the cluster labels
+groups <- cutree(hclust_ward, k=5)
+
+#print_clusters(groups,5)
+
+```
+*Cluster 3 is structured will variable with same protien value with zero or 1 level of fat content in it.
+
+*Cluster 1 mostly has products which has Raisins or any kind of dry fruits in their cereal.
+
+*Cluster 2 is formed based on the the cereals which has honey element in them.
+
+*Cluster 5 is formed based on the wheat element in the cereal.
+
+```{r , include= FALSE}
+set.seed(2019)
+kbest.p<-5       
+cboot.hclust <- clusterboot(cereal_data,clustermethod=hclustCBI,
+                           method="ward.D", k=kbest.p)
+groups<-cboot.hclust$result$partition  
+#print_clusters(groups, kbest.p)
+
+# The vector of cluster stabilities. 
+# Values close to 1 indicate stable clusters
+cboot.hclust$bootmean    
+
+
+#http://www.win-vector.com/blog/2015/09/bootstrap-evaluation-of-clusters/
+```
+*Cluster 3 has the highest stability of 0.8919130 of all the cluster , reason being it has the minimum nuber of observation in the cluster
+
+```{r}
+
+healthy_cereal <- select(mydata,c('fiber','protein'))
+healthy_cereal_data <- as.data.frame(scale(healthy_cereal))
+head(healthy_cereal_data)
+sum(is.na(healthy_cereal_data))
+
+set.seed(2019)
+k2 <- kmeans(healthy_cereal_data, centers = 2, nstart = 25)
+#str(k2)
+
+fviz_cluster(k2, data = healthy_cereal_data)
+k2$size
+
+cluster_table <- cbind(k2$cluster, healthy_cereal_data)
+#head(cluster_table)
+```
+
+*Cluster 1 contains the list of healthy cereals after being normalized. It has cereals which are either high on fiber or high in protein or are between both the variables.
